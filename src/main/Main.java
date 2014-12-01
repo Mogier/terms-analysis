@@ -1,5 +1,7 @@
 package main;
 
+import java.util.Vector;
+
 import services.SpotightConnection;
 
 public class Main {
@@ -13,7 +15,8 @@ public class Main {
 		
 		SpotightConnection spCon = new SpotightConnection();
 		
-		spCon.sendGETRequest("Jaguar car motor");
+		Vector<String> termsNotSpotlighted = spCon.sendGETRequest("Jaguar yolo car motor");
+		System.out.println(termsNotSpotlighted.toString());
 	}
 
 }
