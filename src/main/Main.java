@@ -11,11 +11,10 @@ public class Main {
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		// TODO Auto-generated method stub
 		
 		SpotightConnection spCon = new SpotightConnection();
 		
-		Vector<String> termsNotSpotlighted = spCon.sendGETRequest("Jaguar yolo car motor");
+		Vector<String> termsNotSpotlighted = spCon.sendGETRequest("motor");
 		System.out.println(termsNotSpotlighted.toString());
 	}
 
