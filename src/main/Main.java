@@ -13,7 +13,7 @@ import edu.smu.tspell.wordnet.Synset;
 
 import model.GEXFStaticGraphExample;
 import model.Term;
-import services.SpotightConnection;
+import services.SpotlightConnection;
 import services.WordNetConnection;
 public class Main {
 
@@ -30,7 +30,7 @@ public class Main {
 
 // I - Detect with DBPedia Spotlight		
 		//Example DBPedia Spotlight
-		SpotightConnection spCon = new SpotightConnection();		
+		SpotlightConnection spCon = new SpotlightConnection();		
 		JSONObject termsSpotlighted = spCon.sendGETRequest(textRequest);
 	
 
