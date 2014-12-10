@@ -20,9 +20,9 @@ public class SpotightConnection {
 	private double confidence = 0.0;
 	private int support = 0;
 	
-	public Vector<String> sendGETRequest(String text) throws Exception
+	public JSONObject sendGETRequest(String text) throws Exception
 	{
-		Vector<String> returnVector = new Vector<String>();
+		JSONObject returnJSON = new JSONObject();
 		
 		DefaultHttpClient httpClient = new DefaultHttpClient();
 		try {
@@ -51,47 +51,13 @@ public class SpotightConnection {
 				System.out.println(content);
 				
 				//Serialize JSON
-				JSONObject jsonObj = new JSONObject(content);
-				
-				//String textJSON = jsonObj.getString("@text");
-				
-				Vector<String> surfaceForms = getAllSurfaceForms(jsonObj.getJSONArray("Resources"));
-				String[] terms = text.split(" ");
-				
-				returnVector =  termsNotSpotlight(terms, surfaceForms.toArray(new String[surfaceForms.size()]));
+				returnJSON = new JSONObject(content);
 			}
 
 		} finally {
 			httpClient.getConnectionManager().shutdown();
 		}
-		return returnVector;
+		return returnJSON;
 	}
 	
-	public Vector<String> getAllSurfaceForms(JSONArray ressources) throws JSONException
-	{
-		Vector<String> surfaceForms = new Vector<String>();
-		
-		for(int i=0; i<ressources.length();i++) {
-			JSONObject row = ressources.getJSONObject(i);
-			
-			if (row != null) {
-				String currentSurfaceForm = row.getString("@surfaceForm");
-				surfaceForms.add(currentSurfaceForm);
-			}
-		}
-		
-		return surfaceForms;	
-	}
-	
-	public Vector<String> termsNotSpotlight(String[] allTerms, String[] termsSpotlighted)
-	{
-		Vector<String> termsNotSpotlighted = new Vector<String>();
-		
-		for(int i=0;i<allTerms.length;i++) {
-			if(!Arrays.asList(termsSpotlighted).contains(allTerms[i])) {
-				termsNotSpotlighted.add(allTerms[i]);
-			}
-		}
-		return termsNotSpotlighted;
-	}
 }

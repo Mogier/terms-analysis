@@ -8,7 +8,6 @@ import edu.smu.tspell.wordnet.WordNetDatabase;
 public class WordNetConnection {
 	
 	public void printHyponyms(String text){
-		//WordNetDatabase db = WordNetDatabase.getFileInstance();
 		NounSynset nounSynset; 
 		NounSynset nounSynset2; 
 		NounSynset[] hyponyms; 
