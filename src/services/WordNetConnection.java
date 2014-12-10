@@ -7,6 +7,17 @@ import edu.smu.tspell.wordnet.WordNetDatabase;
 
 public class WordNetConnection {
 	
+	public Synset[] getNounSynsets(String text) {
+		WordNetDatabase database = WordNetDatabase.getFileInstance(); 
+		Synset[] returnsynsets = database.getSynsets(text, SynsetType.NOUN);
+		for (int i = 0; i < returnsynsets.length; i++) { 
+		    NounSynset nounSynset = (NounSynset)(returnsynsets[i]); 
+		    System.err.println(nounSynset.getWordForms()[0] + 
+		            ": " + nounSynset.getDefinition()); 
+		}
+		return returnsynsets;
+	}
+	
 	public void printHyponyms(String text){
 		NounSynset nounSynset; 
 		NounSynset nounSynset2; 
