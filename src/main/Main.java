@@ -1,6 +1,8 @@
 package main;
 
+import java.io.FileInputStream;
 import java.util.Arrays;
+import java.util.Properties;
 import java.util.Vector;
 
 import org.json.JSONArray;
@@ -12,7 +14,7 @@ import edu.smu.tspell.wordnet.Synset;
 
 
 import model.GEXFStaticGraphExample;
-import model.Term;
+import model.OnlineConcept;
 import services.SpotlightConnection;
 import services.WordNetConnection;
 public class Main {
@@ -22,10 +24,12 @@ public class Main {
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		Vector<Term> allTerms = new Vector<Term>();
+		Vector<OnlineConcept> allTerms = new Vector<OnlineConcept>();
+		Properties p = new Properties();
+	    p.load(new FileInputStream("config.ini"));
 		
 		//Configure path to Wordnet DB => Absolutely needed
-		System.setProperty("wordnet.database.dir", "/home/mael/Documents/WordNet-3.0/dict"); //mettre les config dans fichier ext
+		System.setProperty("wordnet.database.dir", p.getProperty("wordnetAbsolutePath")); //mettre les config dans fichier ext
 		String textRequest = "jaguar car";
 
 // I - Detect with DBPedia Spotlight		
@@ -55,14 +59,14 @@ public class Main {
 		//DBPedia
 		JSONArray resources = termsSpotlighted.getJSONArray("Resources");
 		for (int i=0; i< resources.length(); i++) {
-			Term currentTerm = new Term(resources.getJSONObject(i));
+			OnlineConcept currentTerm = new OnlineConcept(resources.getJSONObject(i));
 			allTerms.add(currentTerm);
 		}
 		
 		//Wordnet
 		for (int j=0;j<allSynsets.size();j++) {
 			NounSynset currentNoun = (NounSynset) allSynsets.get(j)[0]; //Le premier du paquet ??
-			allTerms.add(new Term(currentNoun.getWordForms()[0]));
+			allTerms.add(new OnlineConcept(currentNoun.getWordForms()[0]));
 		}
 		
 		
