@@ -14,5 +14,7 @@
 	<classpathentry kind="lib" path="lib/woodstox-core-asl-4.0.6.jar"/>
 	<classpathentry kind="lib" path="lib/xmlunit-1.3.jar"/>
 	<classpathentry kind="lib" path="lib/jaws-bin.jar"/>
+	<classpathentry kind="lib" path="lib/jena-arq-2.12.1.jar"/>
+	<classpathentry kind="lib" path="lib/jena-core-2.12.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
