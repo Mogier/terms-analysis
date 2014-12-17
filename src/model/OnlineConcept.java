@@ -11,6 +11,7 @@ public class OnlineConcept {
 	protected String uri; //String or URI object ? Problem with Wordnet, no real URI (build one)
 	protected TypeTerm type;
 	protected NounSynset synset = null; //Store synset if type = WordNet
+	protected Integer id;
 	
 	protected Vector<OnlineConcept> parents = new Vector<OnlineConcept>(); //Superclasses or hypernyms
 	
@@ -49,6 +50,14 @@ public class OnlineConcept {
 	}
 	
 
+	public Integer getId() {
+		return id;
+	}
+
+	public void setId(Integer id) {
+		this.id = id;
+	}
+
 	public NounSynset getSynset() {
 		return synset;
 	}
@@ -61,16 +70,25 @@ public class OnlineConcept {
 		type = null;
 	}
 	
-	public OnlineConcept(JSONObject dbpediaJSON) throws JSONException {
+	public OnlineConcept(JSONObject dbpediaJSON, int idConcept) throws JSONException {
 		uri = dbpediaJSON.getString("@URI");
 		type = TypeTerm.DBPedia;
-		System.out.println("Creating DBPedia Concept : " + uri);
+		id = idConcept;
+		System.out.println("Creating DBPedia Concept "+id+" : " + uri);
 	}
 	
-	public OnlineConcept(NounSynset wordnetDescription) {
+	public OnlineConcept(String URI,int idConcept) throws JSONException {
+		uri = URI;
+		type = TypeTerm.DBPedia;
+		id = idConcept;
+		System.out.println("Creating DBPedia Concept "+id+" : " + uri);
+	}
+	
+	public OnlineConcept(NounSynset wordnetDescription, int idConcept) {
 		uri = "Wordnet:"+wordnetDescription.getWordForms()[0];
 		type = TypeTerm.Wordnet;
 		synset = wordnetDescription;
-		System.out.println("Creating Wordnet Concept : " + uri);
+		id = idConcept;
+		System.out.println("Creating Wordnet Concept "+id+" : " + uri);
 	}	
 }
