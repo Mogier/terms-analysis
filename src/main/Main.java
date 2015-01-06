@@ -21,8 +21,11 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Properties;
 import java.util.Vector;
 
@@ -48,31 +51,21 @@ public class Main {
 
 	private final static String GENERATED_GEXF_FILE_PATH = "generatedFiles/";
 	static Integer ids = 0;
+	static Properties p;
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		//Configure path to Wordnet DB => Absolutely needed
-		Properties p = new Properties();
+		p = new Properties();
 	    p.load(new FileInputStream("config.ini"));
 		System.setProperty("wordnet.database.dir", p.getProperty("wordnetAbsolutePath")); //mettre les config dans fichier ext
 		
-//		WordNetDatabase database = WordNetDatabase.getFileInstance(); 
-//		Synset[] synsets = database.getSynsets("physical entity", SynsetType.NOUN); 
-//		NounSynset noun = (NounSynset) synsets[0];
-//		System.out.println(noun.getHypernyms().length);
-		
 		String textRequest = "jaguar car";
-		Hashtable<String, OnlineConcept> forest = getAncestors(textRequest, false);
+		Hashtable<String, OnlineConcept> forest = getAncestors(textRequest, false," ");
 		
 		generateGEXFFile(forest);
-		
-		
-// V -  Export model to GEXF		
-		//Example GEXF file generation
-//		GEXFStaticGraphExample graphExample = new GEXFStaticGraphExample();
-//		graphExample.generateExample();
 				
 	}
 	
@@ -87,7 +80,7 @@ public class Main {
 		gexf.setVisualization(true);
 
 		Graph graph = gexf.getGraph();
-		graph.setDefaultEdgeType(EdgeType.UNDIRECTED).setMode(Mode.STATIC);
+		graph.setDefaultEdgeType(EdgeType.DIRECTED).setMode(Mode.STATIC);
 		
 		AttributeList attrList = new AttributeListImpl(AttributeClass.NODE);
 		graph.getAttributeLists().add(attrList);
@@ -101,30 +94,33 @@ public class Main {
 	    	OnlineConcept concept = (OnlineConcept) e.nextElement();
 	    	currentNode = graph.createNode(concept.getId().toString());
 	    	currentNode
-	    		.setLabel(concept.getId().toString())
+	    		.setLabel(concept.getUri())
 	    		.setSize(20)
 	    		.getAttributeValues()
 	    			.addValue(attUrl, concept.getUri());
 	    }
 	    
 	    Enumeration<OnlineConcept> e2 = forest.elements();
+	    List<Node> allNodes = graph.getNodes();
+	    Collections.sort(allNodes, new Comparator<Node>(){
+	        public int compare(Node o1, Node o2){
+	            if(o1.getId() == o2.getId())
+	                return 0;
+	            return Integer.parseInt(o1.getId()) < Integer.parseInt(o2.getId()) ? -1 : 1;
+	        }
+	   });
+	    
 	    while(e2.hasMoreElements()) {
 	    	OnlineConcept concept = (OnlineConcept) e2.nextElement();
-	    	Vector<OnlineConcept> parents = concept.getParents();
-	    	currentNode = graph.getNodes().get(concept.getId());
-	    	System.out.println("child " + concept.getId());
-	    	for(int i=0; i<parents.size();i++) {
-	    		System.err.println("parent "+parents.get(i).getId());
-	    		Node parentNode = graph.getNodes().get(parents.get(i).getId());
-	    		currentNode.connectTo(parentNode);
+	    	if(concept!=null){
+	    		Vector<OnlineConcept> parents = concept.getParents();
+		    	currentNode = allNodes.get(concept.getId());
+		    	for(int i=0; i<parents.size();i++) {
+		    		Node parentNode = graph.getNodes().get(parents.get(i).getId());
+		    		currentNode.connectTo(parentNode);
+		    	}
 	    	}
 	    }
-		
-//		gephi.connectTo("0", webatlas);
-//		gephi.connectTo("1", rtgi);
-//		webatlas.connectTo("2", gephi);
-//		rtgi.connectTo("3", webatlas);
-//		gephi.connectTo("4", blab);
 
 		StaxGraphWriter graphWriter = new StaxGraphWriter();
 		File f = new File(GENERATED_GEXF_FILE_PATH+"static_graph_sample.gexf");
@@ -139,7 +135,7 @@ public class Main {
 		
 	}
 
-	private static Hashtable<String, OnlineConcept> getAncestors(String termsToLookFor, boolean all) throws Exception {
+	private static Hashtable<String, OnlineConcept> getAncestors(String termsToLookFor, boolean all, String separatorChar) throws Exception {
 		Hashtable<String, OnlineConcept> allConcepts = new Hashtable<String, OnlineConcept>(); //Store all concepts, create only one entity per concept (URI - Object)
 		Hashtable<String, OnlineConcept> tableTerms = new Hashtable<String, OnlineConcept>(); //Table used to store terms we are looking for and their ancestors (termString - Object)
 
@@ -150,7 +146,7 @@ public class Main {
 	
 
 // II - Detect terms not found and request them in Wordnet
-		String[] terms = termsToLookFor.split(" "); 
+		String[] terms = termsToLookFor.split(separatorChar); 
 		Vector<String> termsNotSpotlighted= new Vector<String>(Arrays.asList(terms));
 		if(termsSpotlighted.has("Resources")){
 			Vector<String> surfaceForms =getAllSurfaceForms(termsSpotlighted.getJSONArray("Resources"));
@@ -207,8 +203,8 @@ public class Main {
 			if (concept.getType() == TypeTerm.DBPedia){
 	    		//get superClasses
 				//If entity, we need to get the classes
-				String sparqlClassQuery = "PREFIX rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#> " +
-						"select ?o1 where {GRAPH <http://dbpedia.org> {<"+concept.getUri()+"> rdf:type  ?o1 " +
+				String sparqlClassQuery = "PREFIX rdf:" + p.getProperty("rdf") +
+						" select ?o1 where {GRAPH <http://dbpedia.org> {<"+concept.getUri()+"> rdf:type  ?o1 " +
 						"FILTER regex(?o1, '^^http://dbpedia.org/ontology')}}"; 
 				System.out.println(sparqlClassQuery);
 				Query queryClass = QueryFactory.create(sparqlClassQuery);
@@ -234,8 +230,8 @@ public class Main {
 				qexecClass.close();
 				
 				//If class, get superclasses
-				String sparqlQuery = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> " +
-						"select distinct ?o WHERE{GRAPH <http://dbpedia.org> { <"+concept.getUri()+"> rdfs:subClassOf  ?o " +
+				String sparqlQuery = "PREFIX rdfs:"+p.getProperty("rdfs") +
+						" select distinct ?o WHERE{GRAPH <http://dbpedia.org> { <"+concept.getUri()+"> rdfs:subClassOf  ?o " +
 						"FILTER regex(?o, '^^http://dbpedia.org/ontology || ^^http://www.w3.org/2002/07/owl#Thing')}}";
 				System.out.println(sparqlQuery);
 				Query query = QueryFactory.create(sparqlQuery);
