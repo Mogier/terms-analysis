@@ -80,12 +80,13 @@ public class Main {
 		gexf.setVisualization(true);
 
 		Graph graph = gexf.getGraph();
-		graph.setDefaultEdgeType(EdgeType.DIRECTED).setMode(Mode.STATIC);
+		graph.setDefaultEdgeType(EdgeType.UNDIRECTED).setMode(Mode.STATIC);
 		
 		AttributeList attrList = new AttributeListImpl(AttributeClass.NODE);
 		graph.getAttributeLists().add(attrList);
 		
 		Attribute attUrl = attrList.createAttribute("0", AttributeType.STRING, "url");
+		Attribute attStartingConcept = attrList.createAttribute("1", AttributeType.STRING, "startingConcept");
 		
 		Enumeration<OnlineConcept> e = forest.elements();
 		Node currentNode;
@@ -97,7 +98,8 @@ public class Main {
 	    		.setLabel(concept.getUri())
 	    		.setSize(20)
 	    		.getAttributeValues()
-	    			.addValue(attUrl, concept.getUri());
+	    			.addValue(attUrl, concept.getUri())
+	    			.addValue(attStartingConcept, concept.isStartingConcept().toString());
 	    }
 	    
 	    Enumeration<OnlineConcept> e2 = forest.elements();
@@ -154,7 +156,6 @@ public class Main {
 			System.out.println(termsNotSpotlighted);
 		}
 		
-		//Example WordNet
 		WordNetConnection wordnet = new WordNetConnection();
 		Vector<Synset[]> allSynsets = new Vector<Synset[]>();
 		
@@ -171,7 +172,7 @@ public class Main {
 		if(termsSpotlighted.has("Resources")){
 			JSONArray resources = termsSpotlighted.getJSONArray("Resources");
 			for (int i=0; i< resources.length(); i++) {
-				OnlineConcept currentConcept = new OnlineConcept(resources.getJSONObject(i), ids++);
+				OnlineConcept currentConcept = new OnlineConcept(resources.getJSONObject(i), ids++, true);
 				allConcepts.put(currentConcept.getUri(),currentConcept);
 				tableTerms.put(currentConcept.getUri(),currentConcept);
 			}
@@ -180,7 +181,7 @@ public class Main {
 		//Wordnet
 		for (int j=0;j<allSynsets.size();j++) {
 			NounSynset currentNoun = (NounSynset) allSynsets.get(j)[0]; //Le premier du paquet ??
-			OnlineConcept currentConcept = new OnlineConcept(currentNoun,ids++); 
+			OnlineConcept currentConcept = new OnlineConcept(currentNoun,ids++, true); 
 			allConcepts.put(currentConcept.getUri(),currentConcept);
 			tableTerms.put(currentConcept.getUri(),currentConcept);
 		}
@@ -215,7 +216,7 @@ public class Main {
 					Resource r = soln.getResource("o1"); // Get a result variable - must be a resource
 					String uri = r.getURI();
 					System.out.println(uri);
-					OnlineConcept currentSuperClassConcept = new OnlineConcept(uri,ids);
+					OnlineConcept currentSuperClassConcept = new OnlineConcept(uri,ids, false);
 					if (allConcepts.containsKey(uri))
 						currentSuperClassConcept = allConcepts.get(uri);
 	    			else {
@@ -242,7 +243,7 @@ public class Main {
 					Resource r = soln.getResource("o"); // Get a result variable - must be a resource
 					String uri = r.getURI();
 					System.out.println(uri);
-					OnlineConcept currentSuperClassConcept = new OnlineConcept(uri,ids);
+					OnlineConcept currentSuperClassConcept = new OnlineConcept(uri,ids, false);
 					if (allConcepts.containsKey(uri))
 						currentSuperClassConcept = allConcepts.get(uri);
 	    			else {
@@ -263,7 +264,7 @@ public class Main {
 	    		
 	    		for (int i=0;i<hypers.length;i++) {
 	    			currentHyper = hypers[i];
-	    			OnlineConcept currentHyperConcept = new OnlineConcept(currentHyper,ids);
+	    			OnlineConcept currentHyperConcept = new OnlineConcept(currentHyper,ids, false);
 	    			String uri = currentHyperConcept.getUri();
 	    			if (allConcepts.containsKey(uri))
 	    				currentHyperConcept = allConcepts.get(uri);

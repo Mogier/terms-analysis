@@ -12,10 +12,19 @@ public class OnlineConcept {
 	protected TypeTerm type;
 	protected NounSynset synset = null; //Store synset if type = WordNet
 	protected Integer id;
-	
+	protected Boolean startingConcept = false;
+
 	protected Vector<OnlineConcept> parents = new Vector<OnlineConcept>(); //Superclasses or hypernyms
 	
 	protected Vector<OnlineConcept> childs = new Vector<OnlineConcept>(); //Subclasses or hyponyms
+
+	public Boolean isStartingConcept() {
+		return startingConcept;
+	}
+
+	public void setStartingConcept(boolean startingConcept) {
+		this.startingConcept = startingConcept;
+	}
 	
 	public String getUri() {
 		return uri;
@@ -70,25 +79,28 @@ public class OnlineConcept {
 		type = null;
 	}
 	
-	public OnlineConcept(JSONObject dbpediaJSON, int idConcept) throws JSONException {
+	public OnlineConcept(JSONObject dbpediaJSON, int idConcept, boolean base) throws JSONException {
 		uri = dbpediaJSON.getString("@URI");
 		type = TypeTerm.DBPedia;
 		id = idConcept;
+		startingConcept = base;
 		System.out.println("Creating DBPedia Concept "+id+" : " + uri);
 	}
 	
-	public OnlineConcept(String URI,int idConcept) throws JSONException {
+	public OnlineConcept(String URI,int idConcept, boolean base) throws JSONException {
 		uri = URI;
 		type = TypeTerm.DBPedia;
 		id = idConcept;
+		startingConcept = base;
 		System.out.println("Creating DBPedia Concept "+id+" : " + uri);
 	}
 	
-	public OnlineConcept(NounSynset wordnetDescription, int idConcept) {
+	public OnlineConcept(NounSynset wordnetDescription, int idConcept, boolean base) {
 		uri = "Wordnet:"+wordnetDescription.getWordForms()[0];
 		type = TypeTerm.Wordnet;
 		synset = wordnetDescription;
 		id = idConcept;
+		startingConcept = base;
 		System.out.println("Creating Wordnet Concept "+id+" : " + uri);
 	}	
 }
