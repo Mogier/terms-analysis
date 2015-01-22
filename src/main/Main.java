@@ -39,12 +39,15 @@ import com.hp.hpl.jena.query.QueryExecutionFactory;
 import com.hp.hpl.jena.query.QueryFactory;
 import com.hp.hpl.jena.query.QuerySolution;
 import com.hp.hpl.jena.query.ResultSet;
+import com.hp.hpl.jena.rdf.model.Literal;
 import com.hp.hpl.jena.rdf.model.Resource;
 
 import edu.smu.tspell.wordnet.NounSynset;
 import edu.smu.tspell.wordnet.Synset;
+import model.DBpediaConcept;
 import model.OnlineConcept;
 import model.TypeTerm;
+import model.WordNetConcept;
 import services.SpotlightConnection;
 import services.WordNetConnection;
 public class Main {
@@ -62,7 +65,7 @@ public class Main {
 	    p.load(new FileInputStream("config.ini"));
 		System.setProperty("wordnet.database.dir", p.getProperty("wordnetAbsolutePath")); //mettre les config dans fichier ext
 		
-		String textRequest = "jaguar car";
+		String textRequest = "freshness outdoors differential focus spain green leaf day colour image no people photography";
 		Hashtable<String, OnlineConcept> forest = getAncestors(textRequest, false," ");
 		
 		generateGEXFFile(forest);
@@ -75,8 +78,8 @@ public class Main {
 		
 		gexf.getMetadata()
 			.setLastModified(date.getTime())
-			.setCreator("Gephi.org")
-			.setDescription("A Web network");
+			.setCreator("Mael Ogier")
+			.setDescription("Concepts ontology");
 		gexf.setVisualization(true);
 
 		Graph graph = gexf.getGraph();
@@ -141,8 +144,7 @@ public class Main {
 		Hashtable<String, OnlineConcept> allConcepts = new Hashtable<String, OnlineConcept>(); //Store all concepts, create only one entity per concept (URI - Object)
 		Hashtable<String, OnlineConcept> tableTerms = new Hashtable<String, OnlineConcept>(); //Table used to store terms we are looking for and their ancestors (termString - Object)
 
-// I - Detect with DBPedia Spotlight		
-		//Example DBPedia Spotlight
+// I - Detect with DBPedia Spotlight	
 		SpotlightConnection spCon = new SpotlightConnection();		
 		JSONObject termsSpotlighted = spCon.sendGETRequest(termsToLookFor);
 	
@@ -172,18 +174,29 @@ public class Main {
 		if(termsSpotlighted.has("Resources")){
 			JSONArray resources = termsSpotlighted.getJSONArray("Resources");
 			for (int i=0; i< resources.length(); i++) {
-				OnlineConcept currentConcept = new OnlineConcept(resources.getJSONObject(i), ids++, true);
-				allConcepts.put(currentConcept.getUri(),currentConcept);
-				tableTerms.put(currentConcept.getUri(),currentConcept);
+				OnlineConcept currentConcept = new DBpediaConcept(resources.getJSONObject(i), ids, true);
+				if(allConcepts.get(currentConcept.getUri())==null)
+				{
+					allConcepts.put(currentConcept.getUri(),currentConcept);
+					tableTerms.put(currentConcept.getUri(),currentConcept);
+					ids++;
+				}
 			}
 		}
 		
 		//Wordnet
 		for (int j=0;j<allSynsets.size();j++) {
-			NounSynset currentNoun = (NounSynset) allSynsets.get(j)[0]; //Le premier du paquet ??
-			OnlineConcept currentConcept = new OnlineConcept(currentNoun,ids++, true); 
-			allConcepts.put(currentConcept.getUri(),currentConcept);
-			tableTerms.put(currentConcept.getUri(),currentConcept);
+			Synset[] current = allSynsets.get(j);
+			if (current.length !=0) {
+				NounSynset currentNoun = (NounSynset) allSynsets.get(j)[0]; //Le premier du paquet ??
+				OnlineConcept currentConcept = new WordNetConcept(currentNoun,ids, true); 
+				if(allConcepts.get(currentConcept.getUri())==null)
+				{
+					allConcepts.put(currentConcept.getUri(),currentConcept);
+					tableTerms.put(currentConcept.getUri(),currentConcept);
+					ids++;
+				}
+			}
 		}
 		
 		
@@ -195,7 +208,34 @@ public class Main {
 	    	OnlineConcept concept = (OnlineConcept) e.nextElement();
 	    	recursionTerms(concept, allConcepts);
 	    }
-
+	    
+// V - Find equivalences DBpedia/Wordnet
+	    Enumeration<OnlineConcept> eConcepts = allConcepts.elements();
+	    while(eConcepts.hasMoreElements()) {
+	    	
+	    	OnlineConcept concept = (OnlineConcept) eConcepts.nextElement();
+	    	System.out.println(concept.getId() + " " + concept.getUri());
+	    	if(concept.getType()==TypeTerm.DBPedia) {
+	    		//get label, query WordNet and apply recursionTerms
+	    		Synset[] syns = wordnet.getNounSynsets(concept.getLabel());
+	    		if(syns.length!=0){
+	    			NounSynset currentNoun = (NounSynset) syns[0]; //Le premier du paquet ??
+					OnlineConcept currentConcept = new WordNetConcept(currentNoun,ids, true); 
+					if(allConcepts.get(currentConcept.getUri())==null)
+					{
+						allConcepts.put(currentConcept.getUri(),currentConcept);
+						concept.getParents().add(currentConcept);
+						currentConcept.getChilds().add(concept);
+						ids++;
+					}
+					recursionTerms(currentConcept, allConcepts);
+	    		
+	    		}
+	    		
+	    	}
+	   
+	    }
+	    
 		return allConcepts;
 	}
 	
@@ -205,8 +245,11 @@ public class Main {
 	    		//get superClasses
 				//If entity, we need to get the classes
 				String sparqlClassQuery = "PREFIX rdf:" + p.getProperty("rdf") +
-						" select ?o1 where {GRAPH <http://dbpedia.org> {<"+concept.getUri()+"> rdf:type  ?o1 " +
-						"FILTER regex(?o1, '^^http://dbpedia.org/ontology')}}"; 
+						"PREFIX rdfs:" +p.getProperty("rdfs") +
+						" select ?o1 ?o2 where {GRAPH <http://dbpedia.org> {<"+concept.getUri()+"> rdf:type ?o1 . " +
+								"?o1 rdfs:label ?o2 " +
+						"FILTER regex(?o1, '^^http://dbpedia.org/ontology') " +
+						"FILTER(langMatches(lang(?o2), 'EN'))}}"; 
 				System.out.println(sparqlClassQuery);
 				Query queryClass = QueryFactory.create(sparqlClassQuery);
 				QueryExecution qexecClass = QueryExecutionFactory.sparqlService("http://dbpedia.org/sparql", queryClass);	
@@ -214,9 +257,11 @@ public class Main {
 				for ( ; resultsClass.hasNext() ; ) {
 					QuerySolution soln = resultsClass.nextSolution();
 					Resource r = soln.getResource("o1"); // Get a result variable - must be a resource
+					Literal l = soln.getLiteral("o2");
 					String uri = r.getURI();
+					String label = l.getString();
 					System.out.println(uri);
-					OnlineConcept currentSuperClassConcept = new OnlineConcept(uri,ids, false);
+					OnlineConcept currentSuperClassConcept = new DBpediaConcept(uri,label,ids, false);
 					if (allConcepts.containsKey(uri))
 						currentSuperClassConcept = allConcepts.get(uri);
 	    			else {
@@ -232,8 +277,10 @@ public class Main {
 				
 				//If class, get superclasses
 				String sparqlQuery = "PREFIX rdfs:"+p.getProperty("rdfs") +
-						" select distinct ?o WHERE{GRAPH <http://dbpedia.org> { <"+concept.getUri()+"> rdfs:subClassOf  ?o " +
-						"FILTER regex(?o, '^^http://dbpedia.org/ontology || ^^http://www.w3.org/2002/07/owl#Thing')}}";
+						" select distinct ?o ?o2 WHERE{GRAPH <http://dbpedia.org> { <"+concept.getUri()+"> rdfs:subClassOf  ?o . " +
+						"?o rdfs:label ?o2 "+
+						"FILTER regex(?o, '^^http://dbpedia.org/ontology || ^^http://www.w3.org/2002/07/owl#Thing') " +
+						"FILTER(langMatches(lang(?o2), 'EN'))}}";
 				System.out.println(sparqlQuery);
 				Query query = QueryFactory.create(sparqlQuery);
 				QueryExecution qexec = QueryExecutionFactory.sparqlService("http://dbpedia.org/sparql", query);	
@@ -241,9 +288,11 @@ public class Main {
 				for ( ; results.hasNext() ; ) {
 					QuerySolution soln = results.nextSolution();
 					Resource r = soln.getResource("o"); // Get a result variable - must be a resource
+					Literal l = soln.getLiteral("o2");
 					String uri = r.getURI();
-					System.out.println(uri);
-					OnlineConcept currentSuperClassConcept = new OnlineConcept(uri,ids, false);
+					String label = l.getString();
+					System.out.println(uri + " " + label);
+					OnlineConcept currentSuperClassConcept = new DBpediaConcept(uri,label,ids, false);
 					if (allConcepts.containsKey(uri))
 						currentSuperClassConcept = allConcepts.get(uri);
 	    			else {
@@ -260,11 +309,11 @@ public class Main {
 	    	else if (concept.getType() == TypeTerm.Wordnet){
 	    		//Get hypernyms
 	    		NounSynset currentHyper;
-	    		NounSynset[] hypers = concept.getSynset().getHypernyms();
+	    		NounSynset[] hypers = ((WordNetConcept) concept).getSynset().getHypernyms();
 	    		
 	    		for (int i=0;i<hypers.length;i++) {
 	    			currentHyper = hypers[i];
-	    			OnlineConcept currentHyperConcept = new OnlineConcept(currentHyper,ids, false);
+	    			OnlineConcept currentHyperConcept = new WordNetConcept(currentHyper,ids, false);
 	    			String uri = currentHyperConcept.getUri();
 	    			if (allConcepts.containsKey(uri))
 	    				currentHyperConcept = allConcepts.get(uri);

@@ -2,21 +2,32 @@ package model;
 
 import java.util.Vector;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import edu.smu.tspell.wordnet.NounSynset;
-
 public class OnlineConcept {
 	protected String uri; //String or URI object ? Problem with Wordnet, no real URI (build one)
 	protected TypeTerm type;
-	protected NounSynset synset = null; //Store synset if type = WordNet
 	protected Integer id;
-	protected Boolean startingConcept = false;
+	protected Boolean startingConcept;
+	protected String label;
+	protected Vector<OnlineConcept> parents;//Superclasses or hypernyms
+	protected Vector<OnlineConcept> childs; //Subclasses or hyponyms
 
-	protected Vector<OnlineConcept> parents = new Vector<OnlineConcept>(); //Superclasses or hypernyms
+	public OnlineConcept(String localUri, TypeTerm localType, Integer localId, Boolean localStartingConcept, String localLabel) {
+		uri = localUri;
+		type = localType;
+		id = localId;
+		startingConcept = localStartingConcept;
+		label = localLabel;
+		parents = new Vector<OnlineConcept>();
+		childs = new Vector<OnlineConcept>();		
+	}
 	
-	protected Vector<OnlineConcept> childs = new Vector<OnlineConcept>(); //Subclasses or hyponyms
+	public String getLabel() {
+		return label;
+	}
+
+	public void setLabel(String label) {
+		this.label = label;
+	}
 
 	public Boolean isStartingConcept() {
 		return startingConcept;
@@ -66,41 +77,5 @@ public class OnlineConcept {
 	public void setId(Integer id) {
 		this.id = id;
 	}
-
-	public NounSynset getSynset() {
-		return synset;
-	}
-
-	public void setSynset(NounSynset synset) {
-		this.synset = synset;
-	}
-
-	public OnlineConcept() {
-		type = null;
-	}
-	
-	public OnlineConcept(JSONObject dbpediaJSON, int idConcept, boolean base) throws JSONException {
-		uri = dbpediaJSON.getString("@URI");
-		type = TypeTerm.DBPedia;
-		id = idConcept;
-		startingConcept = base;
-		System.out.println("Creating DBPedia Concept "+id+" : " + uri);
-	}
-	
-	public OnlineConcept(String URI,int idConcept, boolean base) throws JSONException {
-		uri = URI;
-		type = TypeTerm.DBPedia;
-		id = idConcept;
-		startingConcept = base;
-		System.out.println("Creating DBPedia Concept "+id+" : " + uri);
-	}
-	
-	public OnlineConcept(NounSynset wordnetDescription, int idConcept, boolean base) {
-		uri = "Wordnet:"+wordnetDescription.getWordForms()[0];
-		type = TypeTerm.Wordnet;
-		synset = wordnetDescription;
-		id = idConcept;
-		startingConcept = base;
-		System.out.println("Creating Wordnet Concept "+id+" : " + uri);
-	}	
+		
 }
