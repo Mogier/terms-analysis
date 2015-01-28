@@ -65,7 +65,8 @@ public class Main {
 	    p.load(new FileInputStream("config.ini"));
 		System.setProperty("wordnet.database.dir", p.getProperty("wordnetAbsolutePath")); //mettre les config dans fichier ext
 		
-		String textRequest = "freshness outdoors differential focus spain green leaf day colour image no people photography";
+		//String textRequest = "freshness outdoors differential focus spain green leaf day colour image no people photography";
+		String textRequest=" Barack Obama jaguar";
 		Hashtable<String, OnlineConcept> forest = getAncestors(textRequest, false," ");
 		
 		generateGEXFFile(forest);
@@ -83,7 +84,7 @@ public class Main {
 		gexf.setVisualization(true);
 
 		Graph graph = gexf.getGraph();
-		graph.setDefaultEdgeType(EdgeType.UNDIRECTED).setMode(Mode.STATIC);
+		graph.setDefaultEdgeType(EdgeType.DIRECTED).setMode(Mode.STATIC);
 		
 		AttributeList attrList = new AttributeListImpl(AttributeClass.NODE);
 		graph.getAttributeLists().add(attrList);
@@ -114,7 +115,7 @@ public class Main {
 	            return Integer.parseInt(o1.getId()) < Integer.parseInt(o2.getId()) ? -1 : 1;
 	        }
 	   });
-	    
+	    Integer idEdge=0;
 	    while(e2.hasMoreElements()) {
 	    	OnlineConcept concept = (OnlineConcept) e2.nextElement();
 	    	if(concept!=null){
@@ -122,13 +123,17 @@ public class Main {
 		    	currentNode = allNodes.get(concept.getId());
 		    	for(int i=0; i<parents.size();i++) {
 		    		Node parentNode = graph.getNodes().get(parents.get(i).getId());
-		    		currentNode.connectTo(parentNode);
+		    		if(concept.getType()!=parents.get(i).getType()) //Equivalence DBpedia-Wordnet
+		    			currentNode.connectTo(idEdge.toString(), "equiv", EdgeType.MUTUAL, parentNode);
+		    		else
+		    			currentNode.connectTo(idEdge.toString(), "parent", EdgeType.DIRECTED, parentNode);
+		    		idEdge++;
 		    	}
 	    	}
 	    }
 
 		StaxGraphWriter graphWriter = new StaxGraphWriter();
-		File f = new File(GENERATED_GEXF_FILE_PATH+"static_graph_sample.gexf");
+		File f = new File(GENERATED_GEXF_FILE_PATH+"obamaAndJaguar.gexf");
 		Writer out;
 		try {
 			out =  new FileWriter(f, false);
@@ -210,31 +215,31 @@ public class Main {
 	    }
 	    
 // V - Find equivalences DBpedia/Wordnet
-	    Enumeration<OnlineConcept> eConcepts = allConcepts.elements();
-	    while(eConcepts.hasMoreElements()) {
-	    	
-	    	OnlineConcept concept = (OnlineConcept) eConcepts.nextElement();
-	    	System.out.println(concept.getId() + " " + concept.getUri());
-	    	if(concept.getType()==TypeTerm.DBPedia) {
-	    		//get label, query WordNet and apply recursionTerms
-	    		Synset[] syns = wordnet.getNounSynsets(concept.getLabel());
-	    		if(syns.length!=0){
-	    			NounSynset currentNoun = (NounSynset) syns[0]; //Le premier du paquet ??
-					OnlineConcept currentConcept = new WordNetConcept(currentNoun,ids, true); 
-					if(allConcepts.get(currentConcept.getUri())==null)
-					{
-						allConcepts.put(currentConcept.getUri(),currentConcept);
-						concept.getParents().add(currentConcept);
-						currentConcept.getChilds().add(concept);
-						ids++;
-					}
-					recursionTerms(currentConcept, allConcepts);
-	    		
-	    		}
-	    		
-	    	}
-	   
-	    }
+//	    Enumeration<OnlineConcept> eConcepts = allConcepts.elements();
+//	    while(eConcepts.hasMoreElements()) {
+//	    	
+//	    	OnlineConcept concept = (OnlineConcept) eConcepts.nextElement();
+//	    	System.out.println(concept.getId() + " " + concept.getUri());
+//	    	if(concept.getType()==TypeTerm.DBPedia && !concept.isStartingConcept()) {
+//	    		//get label, query WordNet and apply recursionTerms
+//	    		Synset[] syns = wordnet.getNounSynsets(concept.getLabel());
+//	    		if(syns.length!=0){
+//	    			NounSynset currentNoun = (NounSynset) syns[0]; //Le premier du paquet ??
+//					OnlineConcept currentConcept = new WordNetConcept(currentNoun,ids, true); 
+//					if(allConcepts.get(currentConcept.getUri())==null)
+//					{
+//						allConcepts.put(currentConcept.getUri(),currentConcept);
+//						concept.getParents().add(currentConcept);
+//						currentConcept.getChilds().add(concept);
+//						ids++;
+//					}
+//					recursionTerms(currentConcept, allConcepts);
+//	    		
+//	    		}
+//	    		
+//	    	}
+//	   
+//	    }
 	    
 		return allConcepts;
 	}
@@ -246,10 +251,10 @@ public class Main {
 				//If entity, we need to get the classes
 				String sparqlClassQuery = "PREFIX rdf:" + p.getProperty("rdf") +
 						"PREFIX rdfs:" +p.getProperty("rdfs") +
-						" select ?o1 ?o2 where {GRAPH <http://dbpedia.org> {<"+concept.getUri()+"> rdf:type ?o1 . " +
-								"?o1 rdfs:label ?o2 " +
-						"FILTER regex(?o1, '^^http://dbpedia.org/ontology') " +
-						"FILTER(langMatches(lang(?o2), 'EN'))}}"; 
+						" select ?o1 ?o2 where {GRAPH <http://dbpedia.org> {<"+concept.getUri()+"> rdf:type ?o1 " +
+						"FILTER regex(?o1, '^^http://dbpedia.org/ontology') " +		
+						"OPTIONAL{ ?o1 rdfs:label ?o2 " +						
+						"FILTER(langMatches(lang(?o2), 'EN'))}}}"; 
 				System.out.println(sparqlClassQuery);
 				Query queryClass = QueryFactory.create(sparqlClassQuery);
 				QueryExecution qexecClass = QueryExecutionFactory.sparqlService("http://dbpedia.org/sparql", queryClass);	
@@ -277,10 +282,10 @@ public class Main {
 				
 				//If class, get superclasses
 				String sparqlQuery = "PREFIX rdfs:"+p.getProperty("rdfs") +
-						" select distinct ?o ?o2 WHERE{GRAPH <http://dbpedia.org> { <"+concept.getUri()+"> rdfs:subClassOf  ?o . " +
-						"?o rdfs:label ?o2 "+
+						" select distinct ?o ?o2 WHERE{GRAPH <http://dbpedia.org> { <"+concept.getUri()+"> rdfs:subClassOf  ?o " +
 						"FILTER regex(?o, '^^http://dbpedia.org/ontology || ^^http://www.w3.org/2002/07/owl#Thing') " +
-						"FILTER(langMatches(lang(?o2), 'EN'))}}";
+						"OPTIONAL{ ?o rdfs:label ?o2 "+
+						"FILTER(langMatches(lang(?o2), 'EN'))}}}";
 				System.out.println(sparqlQuery);
 				Query query = QueryFactory.create(sparqlQuery);
 				QueryExecution qexec = QueryExecutionFactory.sparqlService("http://dbpedia.org/sparql", query);	
@@ -290,7 +295,9 @@ public class Main {
 					Resource r = soln.getResource("o"); // Get a result variable - must be a resource
 					Literal l = soln.getLiteral("o2");
 					String uri = r.getURI();
-					String label = l.getString();
+					String label="";
+					if (l!=null)
+						label = l.getString();
 					System.out.println(uri + " " + label);
 					OnlineConcept currentSuperClassConcept = new DBpediaConcept(uri,label,ids, false);
 					if (allConcepts.containsKey(uri))
