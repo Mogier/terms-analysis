@@ -54,6 +54,7 @@ public class Main {
 
 	private final static String GENERATED_GEXF_FILE_PATH = "generatedFiles/";
 	static Integer ids = 0;
+	static Integer maxDepth=1;
 	static Properties p;
 	/**
 	 * @param args
@@ -63,14 +64,17 @@ public class Main {
 		//Configure path to Wordnet DB => Absolutely needed
 		p = new Properties();
 	    p.load(new FileInputStream("config.ini"));
-		System.setProperty("wordnet.database.dir", p.getProperty("wordnetAbsolutePath")); //mettre les config dans fichier ext
+	    System.setProperty("wordnet.database.dir", p.getProperty("wordnetAbsolutePath")); //mettre les config dans fichier ext
 		
 		//String textRequest = "freshness outdoors differential focus spain green leaf day colour image no people photography";
-		String textRequest=" Barack Obama jaguar";
+		String textRequest="barack obama car";
 		Hashtable<String, OnlineConcept> forest = getAncestors(textRequest, false," ");
 		
 		generateGEXFFile(forest);
-				
+		
+		System.err.println("Max depth : " + maxDepth);
+		double averageDepth = averageDepth(forest);
+		System.err.println("Average depth : " + averageDepth);		
 	}
 	
 	private static void generateGEXFFile(Hashtable<String, OnlineConcept> forest) {
@@ -103,7 +107,7 @@ public class Main {
 	    		.setSize(20)
 	    		.getAttributeValues()
 	    			.addValue(attUrl, concept.getUri())
-	    			.addValue(attStartingConcept, concept.isStartingConcept().toString());
+	    			.addValue(attStartingConcept, concept.getStartingConcept().toString());
 	    }
 	    
 	    Enumeration<OnlineConcept> e2 = forest.elements();
@@ -133,7 +137,7 @@ public class Main {
 	    }
 
 		StaxGraphWriter graphWriter = new StaxGraphWriter();
-		File f = new File(GENERATED_GEXF_FILE_PATH+"obamaAndJaguar.gexf");
+		File f = new File(GENERATED_GEXF_FILE_PATH+"im10.gexf");
 		Writer out;
 		try {
 			out =  new FileWriter(f, false);
@@ -149,19 +153,29 @@ public class Main {
 		Hashtable<String, OnlineConcept> allConcepts = new Hashtable<String, OnlineConcept>(); //Store all concepts, create only one entity per concept (URI - Object)
 		Hashtable<String, OnlineConcept> tableTerms = new Hashtable<String, OnlineConcept>(); //Table used to store terms we are looking for and their ancestors (termString - Object)
 
+		String[] terms = termsToLookFor.split(separatorChar); 
+		Vector<String> allTerms = new Vector<String>(Arrays.asList(terms));
+		
+		for (int i=0; i<allTerms.size(); i++) {
+			OnlineConcept newBaseConcept = new OnlineConcept("base:"+allTerms.get(i), TypeTerm.Base, ids, 1,0, allTerms.get(i));
+			if(allConcepts.get(newBaseConcept.getUri())==null) {
+				allConcepts.put(newBaseConcept.getUri(),newBaseConcept);
+				ids++;
+			}				
+		}		
+		
 // I - Detect with DBPedia Spotlight	
 		SpotlightConnection spCon = new SpotlightConnection();		
 		JSONObject termsSpotlighted = spCon.sendGETRequest(termsToLookFor);
 	
 
 // II - Detect terms not found and request them in Wordnet
-		String[] terms = termsToLookFor.split(separatorChar); 
 		Vector<String> termsNotSpotlighted= new Vector<String>(Arrays.asList(terms));
-		if(termsSpotlighted.has("Resources")){
-			Vector<String> surfaceForms =getAllSurfaceForms(termsSpotlighted.getJSONArray("Resources"));
-			termsNotSpotlighted =  termsNotSpotlight(terms, surfaceForms.toArray(new String[surfaceForms.size()]));	
-			System.out.println(termsNotSpotlighted);
-		}
+//		if(termsSpotlighted.has("Resources")){
+//			Vector<String> surfaceForms =getAllSurfaceForms(termsSpotlighted.getJSONArray("Resources"));
+//			termsNotSpotlighted =  termsNotSpotlight(terms, surfaceForms.toArray(new String[surfaceForms.size()]));	
+//			System.out.println(termsNotSpotlighted);
+//		}
 		
 		WordNetConnection wordnet = new WordNetConnection();
 		Vector<Synset[]> allSynsets = new Vector<Synset[]>();
@@ -173,18 +187,26 @@ public class Main {
 		
 // III - Create "base" terms
 // From DBPedia : use URI provided
-// From Wordnet : "Wordnet:" + nounSynset.getWordForms()[0]
+// From Wordnet : regex"Wordnet:" + nounSynset.getWordForms()[0]
 		
 		//DBPedia
 		if(termsSpotlighted.has("Resources")){
 			JSONArray resources = termsSpotlighted.getJSONArray("Resources");
 			for (int i=0; i< resources.length(); i++) {
-				OnlineConcept currentConcept = new DBpediaConcept(resources.getJSONObject(i), ids, true);
+				OnlineConcept currentConcept = new DBpediaConcept(resources.getJSONObject(i), ids,0, 2);
 				if(allConcepts.get(currentConcept.getUri())==null)
 				{
 					allConcepts.put(currentConcept.getUri(),currentConcept);
 					tableTerms.put(currentConcept.getUri(),currentConcept);
 					ids++;
+				}
+				String[] termsSurface = currentConcept.getLabel().split(" ");
+				Vector<String> currentTermsSurface = new Vector<String>(Arrays.asList(termsSurface));
+				
+				for (int j=0; j<currentTermsSurface.size(); j++) {
+					OnlineConcept current = allConcepts.get("base:"+currentTermsSurface.get(j));
+					current.getParents().add(currentConcept);
+					currentConcept.getChilds().add(current);
 				}
 			}
 		}
@@ -194,13 +216,17 @@ public class Main {
 			Synset[] current = allSynsets.get(j);
 			if (current.length !=0) {
 				NounSynset currentNoun = (NounSynset) allSynsets.get(j)[0]; //Le premier du paquet ??
-				OnlineConcept currentConcept = new WordNetConcept(currentNoun,ids, true); 
+				OnlineConcept currentConcept = new WordNetConcept(currentNoun,ids, 0,2); 
 				if(allConcepts.get(currentConcept.getUri())==null)
 				{
 					allConcepts.put(currentConcept.getUri(),currentConcept);
 					tableTerms.put(currentConcept.getUri(),currentConcept);
 					ids++;
 				}
+				OnlineConcept currentW = allConcepts.get("base:"+currentConcept.getLabel());
+				currentW.getParents().add(currentConcept);
+				currentConcept.getChilds().add(currentW);
+				
 			}
 		}
 		
@@ -211,40 +237,43 @@ public class Main {
 
 	    while(e.hasMoreElements()) {
 	    	OnlineConcept concept = (OnlineConcept) e.nextElement();
-	    	recursionTerms(concept, allConcepts);
+	    	recursionTerms(concept, allConcepts,1);
 	    }
 	    
 // V - Find equivalences DBpedia/Wordnet
-//	    Enumeration<OnlineConcept> eConcepts = allConcepts.elements();
-//	    while(eConcepts.hasMoreElements()) {
-//	    	
-//	    	OnlineConcept concept = (OnlineConcept) eConcepts.nextElement();
-//	    	System.out.println(concept.getId() + " " + concept.getUri());
-//	    	if(concept.getType()==TypeTerm.DBPedia && !concept.isStartingConcept()) {
-//	    		//get label, query WordNet and apply recursionTerms
-//	    		Synset[] syns = wordnet.getNounSynsets(concept.getLabel());
-//	    		if(syns.length!=0){
-//	    			NounSynset currentNoun = (NounSynset) syns[0]; //Le premier du paquet ??
-//					OnlineConcept currentConcept = new WordNetConcept(currentNoun,ids, true); 
-//					if(allConcepts.get(currentConcept.getUri())==null)
-//					{
-//						allConcepts.put(currentConcept.getUri(),currentConcept);
-//						concept.getParents().add(currentConcept);
-//						currentConcept.getChilds().add(concept);
-//						ids++;
-//					}
-//					recursionTerms(currentConcept, allConcepts);
-//	    		
-//	    		}
-//	    		
-//	    	}
-//	   
-//	    }
+	    Enumeration<OnlineConcept> eConcepts = allConcepts.elements();
+	    while(eConcepts.hasMoreElements()) {
+	    	
+	    	OnlineConcept concept = (OnlineConcept) eConcepts.nextElement();
+	    	System.out.println(concept.getId() + " " + concept.getUri());
+	    	if(concept.getType()==TypeTerm.DBPedia && concept.getStartingConcept()>0) {
+	    		//get label, query WordNet and apply recursionTerms
+	    		Synset[] syns = wordnet.getNounSynsets(concept.getLabel());
+	    		if(syns.length!=0){
+	    			NounSynset currentNoun = (NounSynset) syns[0]; //Le premier du paquet ??
+					OnlineConcept currentConcept = new WordNetConcept(currentNoun,ids, 2,concept.getDepth()); //Same depth
+					if(allConcepts.get(currentConcept.getUri())==null)
+					{
+						allConcepts.put(currentConcept.getUri(),currentConcept);
+						concept.getParents().add(currentConcept);
+						currentConcept.getChilds().add(concept);
+						ids++;
+					}
+					recursionTerms(currentConcept, allConcepts,2);
+	    		
+	    		}
+	    		
+	    	}
+	   
+	    }
 	    
 		return allConcepts;
 	}
 	
-	private static void recursionTerms(OnlineConcept concept, Hashtable<String, OnlineConcept> allConcepts) throws Exception{
+	private static void recursionTerms(OnlineConcept concept, Hashtable<String, OnlineConcept> allConcepts, Integer base) throws Exception{
+		if(concept.getDepth()>maxDepth)
+			maxDepth=concept.getDepth();
+		
 		if(concept.getParents().isEmpty()){
 			if (concept.getType() == TypeTerm.DBPedia){
 	    		//get superClasses
@@ -264,9 +293,11 @@ public class Main {
 					Resource r = soln.getResource("o1"); // Get a result variable - must be a resource
 					Literal l = soln.getLiteral("o2");
 					String uri = r.getURI();
-					String label = l.getString();
+					String label = "";
+					if(l!=null)
+						label = l.getString();
 					System.out.println(uri);
-					OnlineConcept currentSuperClassConcept = new DBpediaConcept(uri,label,ids, false);
+					OnlineConcept currentSuperClassConcept = new DBpediaConcept(uri,label,ids, base,concept.getDepth()+1);
 					if (allConcepts.containsKey(uri))
 						currentSuperClassConcept = allConcepts.get(uri);
 	    			else {
@@ -299,7 +330,7 @@ public class Main {
 					if (l!=null)
 						label = l.getString();
 					System.out.println(uri + " " + label);
-					OnlineConcept currentSuperClassConcept = new DBpediaConcept(uri,label,ids, false);
+					OnlineConcept currentSuperClassConcept = new DBpediaConcept(uri,label,ids, base,concept.getDepth()+1);
 					if (allConcepts.containsKey(uri))
 						currentSuperClassConcept = allConcepts.get(uri);
 	    			else {
@@ -320,7 +351,7 @@ public class Main {
 	    		
 	    		for (int i=0;i<hypers.length;i++) {
 	    			currentHyper = hypers[i];
-	    			OnlineConcept currentHyperConcept = new WordNetConcept(currentHyper,ids, false);
+	    			OnlineConcept currentHyperConcept = new WordNetConcept(currentHyper,ids, base, concept.getDepth()+1);
 	    			String uri = currentHyperConcept.getUri();
 	    			if (allConcepts.containsKey(uri))
 	    				currentHyperConcept = allConcepts.get(uri);
@@ -335,7 +366,7 @@ public class Main {
 	    		}
 	    	}
 			for (int j=0;j<concept.getParents().size();j++)
-				recursionTerms(concept.getParents().get(j), allConcepts);
+				recursionTerms(concept.getParents().get(j), allConcepts,base);
 		}
 		    	
 	}
@@ -368,5 +399,27 @@ public class Main {
 		System.out.println("Terms not spotlighted :");
 		System.out.println(termsNotSpotlighted.toString());
 		return termsNotSpotlighted;
+	}
+	
+	private static Integer mesureWuPalmer (Hashtable<String, OnlineConcept> forest, OnlineConcept concept1, OnlineConcept concept2) {
+		// score = 2*depth(lcs) / (depth(s1) + depth (s2))
+		//Intégrer les liens ? La mesure de Wu-Palmer ne les prend pas en compte..
+		
+		return 2*maxDepth/(concept1.getDepth()+concept2.getDepth());
+	}
+	
+	private static double averageDepth(Hashtable<String, OnlineConcept> forest){
+		Enumeration<OnlineConcept> e = forest.elements();
+		Integer sumDepth=0;
+		Integer nbElements=0;
+		OnlineConcept currentConcept;
+	    while(e.hasMoreElements()) {
+	    	nbElements++;
+	    	currentConcept = (OnlineConcept) e.nextElement(); 
+	    	sumDepth+= currentConcept.getDepth();
+	    }
+	    
+	    return (double)sumDepth/nbElements;
+		
 	}
 }

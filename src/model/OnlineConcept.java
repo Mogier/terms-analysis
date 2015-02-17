@@ -3,24 +3,37 @@ package model;
 import java.util.Vector;
 
 public class OnlineConcept {
-	protected String uri; //String or URI object ? Problem with Wordnet, no real URI (build one)
+	protected String uri;
 	protected TypeTerm type;
 	protected Integer id;
-	protected Boolean startingConcept;
+	protected Integer depth;
+	protected Integer startingConcept; //0 : starting | 1 : created | 2 : created through equivalences
 	protected String label;
 	protected Vector<OnlineConcept> parents;//Superclasses or hypernyms
 	protected Vector<OnlineConcept> childs; //Subclasses or hyponyms
 
-	public OnlineConcept(String localUri, TypeTerm localType, Integer localId, Boolean localStartingConcept, String localLabel) {
+	public OnlineConcept(String localUri, TypeTerm localType, Integer localId, Integer localDepth, Integer localStartingConcept, String localLabel) {
 		uri = localUri;
 		type = localType;
 		id = localId;
+		depth = localDepth;
 		startingConcept = localStartingConcept;
 		label = localLabel;
 		parents = new Vector<OnlineConcept>();
-		childs = new Vector<OnlineConcept>();		
+		childs = new Vector<OnlineConcept>();	
+		
+
+		System.out.println("Creating Base Concept "+id+" " + label + " : " + uri);
 	}
 	
+	public Integer getDepth() {
+		return depth;
+	}
+
+	public void setDepth(Integer depth) {
+		this.depth = depth;
+	}
+
 	public String getLabel() {
 		return label;
 	}
@@ -29,11 +42,11 @@ public class OnlineConcept {
 		this.label = label;
 	}
 
-	public Boolean isStartingConcept() {
+	public Integer getStartingConcept() {
 		return startingConcept;
 	}
 
-	public void setStartingConcept(boolean startingConcept) {
+	public void setStartingConcept(Integer startingConcept) {
 		this.startingConcept = startingConcept;
 	}
 	

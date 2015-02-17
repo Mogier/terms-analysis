@@ -2,5 +2,6 @@ package model;
 
 public enum TypeTerm {
 	DBPedia,
-	Wordnet;
+	Wordnet,
+	Base;
 }
