@@ -61,7 +61,7 @@ public class Main {
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		//Configure path to Wordnet DB => Absolutely needed
+		//Configure path to Wordnet DB => Absolutely needed 
 		p = new Properties();
 	    p.load(new FileInputStream("config.ini"));
 	    System.setProperty("wordnet.database.dir", p.getProperty("wordnetAbsolutePath")); //mettre les config dans fichier ext
@@ -75,6 +75,12 @@ public class Main {
 		System.err.println("Max depth : " + maxDepth);
 		double averageDepth = averageDepth(forest);
 		System.err.println("Average depth : " + averageDepth);		
+	}
+	
+	private static void testReadGEXFFile()
+	{
+		Gexf ge = new GexfImpl();
+		
 	}
 	
 	private static void generateGEXFFile(Hashtable<String, OnlineConcept> forest) {
@@ -93,7 +99,7 @@ public class Main {
 		AttributeList attrList = new AttributeListImpl(AttributeClass.NODE);
 		graph.getAttributeLists().add(attrList);
 		
-		Attribute attUrl = attrList.createAttribute("0", AttributeType.STRING, "url");
+		Attribute attUri = attrList.createAttribute("0", AttributeType.STRING, "uri");
 		Attribute attStartingConcept = attrList.createAttribute("1", AttributeType.STRING, "startingConcept");
 		
 		Enumeration<OnlineConcept> e = forest.elements();
@@ -106,7 +112,7 @@ public class Main {
 	    		.setLabel(concept.getUri())
 	    		.setSize(20)
 	    		.getAttributeValues()
-	    			.addValue(attUrl, concept.getUri())
+	    			.addValue(attUri, concept.getUri())
 	    			.addValue(attStartingConcept, concept.getStartingConcept().toString());
 	    }
 	    
