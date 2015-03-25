@@ -52,7 +52,7 @@ import services.SpotlightConnection;
 import services.WordNetConnection;
 public class Main {
 
-	private final static String GENERATED_GEXF_FILE_PATH = "generatedFiles/";
+	private final static String GENERATED_GEXF_FILE_PATH = "generatedFilesDog/";
 	static Integer ids = 0;
 	static Integer maxDepth=1;
 	static Properties p;
@@ -67,23 +67,18 @@ public class Main {
 	    System.setProperty("wordnet.database.dir", p.getProperty("wordnetAbsolutePath")); //mettre les config dans fichier ext
 		
 		//String textRequest = "freshness outdoors differential focus spain green leaf day colour image no people photography";
-		String textRequest="barack obama car";
-		Hashtable<String, OnlineConcept> forest = getAncestors(textRequest, false," ");
+		String textRequest="barack obama";
+		String separator = ",";
+		Hashtable<String, OnlineConcept> forest = getAncestors(textRequest, false,separator);
 		
-		generateGEXFFile(forest);
+		generateGEXFFile(forest, textRequest.replace(" ", "_").replace(separator, "__").toLowerCase());
 		
 		System.err.println("Max depth : " + maxDepth);
 		double averageDepth = averageDepth(forest);
 		System.err.println("Average depth : " + averageDepth);		
 	}
 	
-	private static void testReadGEXFFile()
-	{
-		Gexf ge = new GexfImpl();
-		
-	}
-	
-	private static void generateGEXFFile(Hashtable<String, OnlineConcept> forest) {
+	private static void generateGEXFFile(Hashtable<String, OnlineConcept> forest, String nameFile) {
 		Gexf gexf = new GexfImpl();
 		Calendar date = Calendar.getInstance();
 		
@@ -143,7 +138,7 @@ public class Main {
 	    }
 
 		StaxGraphWriter graphWriter = new StaxGraphWriter();
-		File f = new File(GENERATED_GEXF_FILE_PATH+"im10.gexf");
+		File f = new File(GENERATED_GEXF_FILE_PATH+nameFile+".gexf");
 		Writer out;
 		try {
 			out =  new FileWriter(f, false);
@@ -163,7 +158,7 @@ public class Main {
 		Vector<String> allTerms = new Vector<String>(Arrays.asList(terms));
 		
 		for (int i=0; i<allTerms.size(); i++) {
-			OnlineConcept newBaseConcept = new OnlineConcept("base:"+allTerms.get(i), TypeTerm.Base, ids, 1,0, allTerms.get(i));
+			OnlineConcept newBaseConcept = new OnlineConcept("base:"+allTerms.get(i).toLowerCase(), TypeTerm.Base, ids, 1,0, allTerms.get(i));
 			if(allConcepts.get(newBaseConcept.getUri())==null) {
 				allConcepts.put(newBaseConcept.getUri(),newBaseConcept);
 				ids++;
@@ -206,7 +201,7 @@ public class Main {
 					tableTerms.put(currentConcept.getUri(),currentConcept);
 					ids++;
 				}
-				String[] termsSurface = currentConcept.getLabel().split(" ");
+				String[] termsSurface = currentConcept.getLabel().split(separatorChar);
 				Vector<String> currentTermsSurface = new Vector<String>(Arrays.asList(termsSurface));
 				
 				for (int j=0; j<currentTermsSurface.size(); j++) {
@@ -229,7 +224,15 @@ public class Main {
 					tableTerms.put(currentConcept.getUri(),currentConcept);
 					ids++;
 				}
-				OnlineConcept currentW = allConcepts.get("base:"+currentConcept.getLabel());
+				
+				//Label from base can be [x] with x!=0
+				OnlineConcept currentW = null;
+				int l=0;
+				while(currentW==null) {
+					String req = "base:"+allSynsets.get(j)[0].getWordForms()[l++].toLowerCase();
+					currentW = allConcepts.get(req);
+				}
+				
 				currentW.getParents().add(currentConcept);
 				currentConcept.getChilds().add(currentW);
 				
