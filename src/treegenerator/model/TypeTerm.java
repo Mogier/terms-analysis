@@ -1,4 +1,4 @@
-package model;
+package treegenerator.model;
 
 public enum TypeTerm {
 	DBPedia,

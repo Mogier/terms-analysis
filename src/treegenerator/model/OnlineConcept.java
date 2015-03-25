@@ -1,4 +1,4 @@
-package model;
+package treegenerator.model;
 
 import java.util.Vector;
 

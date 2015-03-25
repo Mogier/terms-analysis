@@ -1,4 +1,4 @@
-package services;
+package treegenerator.services;
 
 import java.net.URLEncoder;
 import java.util.Arrays;

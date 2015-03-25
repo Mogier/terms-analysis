@@ -1,4 +1,4 @@
-package main;
+package treegenerator;
 
 import it.uniroma1.dis.wsngroup.gexf4j.core.EdgeType;
 import it.uniroma1.dis.wsngroup.gexf4j.core.Gexf;
@@ -44,13 +44,13 @@ import com.hp.hpl.jena.rdf.model.Resource;
 
 import edu.smu.tspell.wordnet.NounSynset;
 import edu.smu.tspell.wordnet.Synset;
-import model.DBpediaConcept;
-import model.OnlineConcept;
-import model.TypeTerm;
-import model.WordNetConcept;
-import services.SpotlightConnection;
-import services.WordNetConnection;
-public class Main {
+import treegenerator.model.DBpediaConcept;
+import treegenerator.model.OnlineConcept;
+import treegenerator.model.TypeTerm;
+import treegenerator.model.WordNetConcept;
+import treegenerator.services.SpotlightConnection;
+import treegenerator.services.WordNetConnection;
+public class TreeGenerator {
 
 	private final static String GENERATED_GEXF_FILE_PATH = "generatedFilesDog/";
 	static Integer ids = 0;

@@ -1,4 +1,4 @@
-package services;
+package treegenerator.services;
 
 import edu.smu.tspell.wordnet.NounSynset;
 import edu.smu.tspell.wordnet.Synset;

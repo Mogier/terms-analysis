@@ -1,4 +1,4 @@
-package model;
+package treegenerator.model;
 
 import org.json.JSONException;
 import org.json.JSONObject;

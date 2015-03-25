@@ -1,7 +1,7 @@
-package model;
+package treegenerator.model;
 
+import treegenerator.model.OnlineConcept;
 import edu.smu.tspell.wordnet.NounSynset;
-import model.OnlineConcept;
 
 public class WordNetConcept extends OnlineConcept {
 	protected NounSynset synset;
