@@ -52,7 +52,7 @@ import treegenerator.services.SpotlightConnection;
 import treegenerator.services.WordNetConnection;
 public class TreeGenerator {
 
-	private final static String GENERATED_GEXF_FILE_PATH = "generatedFilesDog/";
+	static String GENERATED_GEXF_FILE_PATH;
 	static Integer ids = 0;
 	static Integer maxDepth=1;
 	static Properties p;
@@ -61,21 +61,23 @@ public class TreeGenerator {
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
+		String textRequest= args[0];
+		String separator = args[1];
+		String iniFilePath = args[2];
+		GENERATED_GEXF_FILE_PATH = args[3];
+		
 		//Configure path to Wordnet DB => Absolutely needed 
 		p = new Properties();
-	    p.load(new FileInputStream("config.ini"));
+	    p.load(new FileInputStream(iniFilePath));
 	    System.setProperty("wordnet.database.dir", p.getProperty("wordnetAbsolutePath")); //mettre les config dans fichier ext
-		
-		//String textRequest = "freshness outdoors differential focus spain green leaf day colour image no people photography";
-		String textRequest="barack obama";
-		String separator = ",";
+	
 		Hashtable<String, OnlineConcept> forest = getAncestors(textRequest, false,separator);
 		
 		generateGEXFFile(forest, textRequest.replace(" ", "_").replace(separator, "__").toLowerCase());
 		
-		System.err.println("Max depth : " + maxDepth);
-		double averageDepth = averageDepth(forest);
-		System.err.println("Average depth : " + averageDepth);		
+//		System.err.println("Max depth : " + maxDepth);
+//		double averageDepth = averageDepth(forest);
+//		System.err.println("Average depth : " + averageDepth);		
 	}
 	
 	private static void generateGEXFFile(Hashtable<String, OnlineConcept> forest, String nameFile) {
