@@ -1,5 +1,5 @@
 # terms-analysis
-This program create a semantic forest based on the words on input and edit a .gexf file.
+This program create a semantic forest based on the words on input and edit a .gexf file. Words are singularized before treatment.
 
 ## Launch arguments
 Please call the main methode that way :

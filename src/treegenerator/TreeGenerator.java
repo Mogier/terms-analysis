@@ -48,20 +48,27 @@ import treegenerator.model.DBpediaConcept;
 import treegenerator.model.OnlineConcept;
 import treegenerator.model.TypeTerm;
 import treegenerator.model.WordNetConcept;
+import treegenerator.services.Inflector;
 import treegenerator.services.SpotlightConnection;
 import treegenerator.services.WordNetConnection;
 public class TreeGenerator {
 
 	static String GENERATED_GEXF_FILE_PATH;
-	static Integer ids = 0;
+	static Integer ids;
 	static Integer maxDepth=1;
 	static Properties p;
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		String textRequest= args[0];
+		run(args);
+	}
+	
+	public static String run(String[] args) throws Exception{
+		ids=0;
+		String textRequest= textInputSing(args[0], args[1]);
 		String separator = args[1];
 		String iniFilePath = args[2];
 		GENERATED_GEXF_FILE_PATH = args[3];
@@ -73,14 +80,27 @@ public class TreeGenerator {
 	
 		Hashtable<String, OnlineConcept> forest = getAncestors(textRequest, false,separator);
 		
-		generateGEXFFile(forest, textRequest.replace(" ", "_").replace(separator, "__").toLowerCase());
+		return generateGEXFFile(forest, args[4].replace(" ", "_").replace(separator, "__").toLowerCase());
 		
 //		System.err.println("Max depth : " + maxDepth);
 //		double averageDepth = averageDepth(forest);
-//		System.err.println("Average depth : " + averageDepth);		
+//		System.err.println("Average depth : " + averageDepth);	
 	}
 	
-	private static void generateGEXFFile(Hashtable<String, OnlineConcept> forest, String nameFile) {
+	private static String textInputSing(String textInput, String separator){
+		String result = "";
+		Inflector inf = Inflector.getInstance();
+		String[] tags = textInput.split(separator);
+		for(int i=0; i<tags.length; i++) {
+			String singTag = inf.singularize(tags[i]);
+			result+=singTag + separator;
+		}
+		
+		return result;
+	}
+	
+	private static String generateGEXFFile(Hashtable<String, OnlineConcept> forest, String nameFile) {
+		String filePath = null;
 		Gexf gexf = new GexfImpl();
 		Calendar date = Calendar.getInstance();
 		
@@ -145,11 +165,11 @@ public class TreeGenerator {
 		try {
 			out =  new FileWriter(f, false);
 			graphWriter.writeToStream(gexf, out, "UTF-8");
-			System.out.println(f.getAbsolutePath());
+			filePath = f.getAbsolutePath();
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
-		
+		return filePath;
 	}
 
 	private static Hashtable<String, OnlineConcept> getAncestors(String termsToLookFor, boolean all, String separatorChar) throws Exception {
@@ -197,20 +217,19 @@ public class TreeGenerator {
 			JSONArray resources = termsSpotlighted.getJSONArray("Resources");
 			for (int i=0; i< resources.length(); i++) {
 				OnlineConcept currentConcept = new DBpediaConcept(resources.getJSONObject(i), ids,0, 2);
-				if(allConcepts.get(currentConcept.getUri())==null)
-				{
-					allConcepts.put(currentConcept.getUri(),currentConcept);
-					tableTerms.put(currentConcept.getUri(),currentConcept);
-					ids++;
-				}
-				String[] termsSurface = currentConcept.getLabel().split(separatorChar);
-				Vector<String> currentTermsSurface = new Vector<String>(Arrays.asList(termsSurface));
+				String termsSurface = currentConcept.getLabel();
+				OnlineConcept currentBase= allConcepts.get("base:"+termsSurface);
 				
-				for (int j=0; j<currentTermsSurface.size(); j++) {
-					OnlineConcept current = allConcepts.get("base:"+currentTermsSurface.get(j));
-					current.getParents().add(currentConcept);
-					currentConcept.getChilds().add(current);
-				}
+				if(currentBase!=null) {
+					if(allConcepts.get(currentConcept.getUri())==null)
+					{
+						allConcepts.put(currentConcept.getUri(),currentConcept);
+						tableTerms.put(currentConcept.getUri(),currentConcept);
+						currentBase.getParents().add(currentConcept);
+						currentConcept.getChilds().add(currentBase);
+						ids++;
+					}
+				}				
 			}
 		}
 		
@@ -218,26 +237,26 @@ public class TreeGenerator {
 		for (int j=0;j<allSynsets.size();j++) {
 			Synset[] current = allSynsets.get(j);
 			if (current.length !=0) {
-				NounSynset currentNoun = (NounSynset) allSynsets.get(j)[0]; //Le premier du paquet ??
-				OnlineConcept currentConcept = new WordNetConcept(currentNoun,ids, 0,2); 
-				if(allConcepts.get(currentConcept.getUri())==null)
-				{
-					allConcepts.put(currentConcept.getUri(),currentConcept);
-					tableTerms.put(currentConcept.getUri(),currentConcept);
-					ids++;
-				}
-				
+							
 				//Label from base can be [x] with x!=0
 				OnlineConcept currentW = null;
-				int l=0;
-				while(currentW==null) {
-					String req = "base:"+allSynsets.get(j)[0].getWordForms()[l++].toLowerCase();
+				for(int i=0;i<allSynsets.get(j)[0].getWordForms().length; i++) {
+					String req = "base:"+allSynsets.get(j)[0].getWordForms()[i].toLowerCase();
 					currentW = allConcepts.get(req);
 				}
 				
-				currentW.getParents().add(currentConcept);
-				currentConcept.getChilds().add(currentW);
-				
+				if(currentW!=null) {
+					NounSynset currentNoun = (NounSynset) allSynsets.get(j)[0]; //Le premier du paquet ??
+					OnlineConcept currentConcept = new WordNetConcept(currentNoun,ids, 0,2); 
+					if(allConcepts.get(currentConcept.getUri())==null)
+					{
+						allConcepts.put(currentConcept.getUri(),currentConcept);
+						tableTerms.put(currentConcept.getUri(),currentConcept);
+						ids++;
+					}
+					currentW.getParents().add(currentConcept);
+					currentConcept.getChilds().add(currentW);
+				}
 			}
 		}
 		
@@ -292,7 +311,7 @@ public class TreeGenerator {
 				String sparqlClassQuery = "PREFIX rdf:" + p.getProperty("rdf") +
 						"PREFIX rdfs:" +p.getProperty("rdfs") +
 						" select ?o1 ?o2 where {GRAPH <http://dbpedia.org> {<"+concept.getUri()+"> rdf:type ?o1 " +
-						"FILTER regex(?o1, '^^http://dbpedia.org/ontology') " +		
+						"FILTER regex(?o1, '^^http://dbpedia.org/ontology/(?!Wikidata:)') " +		
 						"OPTIONAL{ ?o1 rdfs:label ?o2 " +						
 						"FILTER(langMatches(lang(?o2), 'EN'))}}}"; 
 				System.out.println(sparqlClassQuery);
@@ -325,7 +344,7 @@ public class TreeGenerator {
 				//If class, get superclasses
 				String sparqlQuery = "PREFIX rdfs:"+p.getProperty("rdfs") +
 						" select distinct ?o ?o2 WHERE{GRAPH <http://dbpedia.org> { <"+concept.getUri()+"> rdfs:subClassOf  ?o " +
-						"FILTER regex(?o, '^^http://dbpedia.org/ontology || ^^http://www.w3.org/2002/07/owl#Thing') " +
+						"FILTER regex(?o, '^^http://dbpedia.org/ontology/(?!Wikidata:) || ^^http://www.w3.org/2002/07/owl#Thing') " +
 						"OPTIONAL{ ?o rdfs:label ?o2 "+
 						"FILTER(langMatches(lang(?o2), 'EN'))}}}";
 				System.out.println(sparqlQuery);
