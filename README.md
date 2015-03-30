@@ -9,10 +9,11 @@ In order to run this program you'll need to :
 - Open the project in Eclipse.
 
 ## Launch arguments
-Please call the main methode that way :
+Please call the main method that way :
 - arg[0] : *TEXT_REQUEST* 
 - arg[1] : *SEPARATOR*
 - arg[2] : *PATH_TO_INI_FILE*
 - arg[3] : *GEXF_EXPORT_DIRECTORY*
+- arg[4] : *File name* (no .gext needed)
 
-Example : "telephone book" "," "config.ini" "generatedFiles/"
+Example : "animal theme,differential focus,no person,outdoor,shell,antennae,edible snail," "," "config.ini" "generatedFiles/" "000"
