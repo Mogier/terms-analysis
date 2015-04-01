@@ -225,9 +225,9 @@ public class TreeGenerator {
 					{
 						allConcepts.put(currentConcept.getUri(),currentConcept);
 						tableTerms.put(currentConcept.getUri(),currentConcept);
+						ids++;
 						currentBase.getParents().add(currentConcept);
 						currentConcept.getChilds().add(currentBase);
-						ids++;
 					}
 				}				
 			}
@@ -240,7 +240,7 @@ public class TreeGenerator {
 							
 				//Label from base can be [x] with x!=0
 				OnlineConcept currentW = null;
-				for(int i=0;i<allSynsets.get(j)[0].getWordForms().length; i++) {
+				for(int i=0;i<allSynsets.get(j)[0].getWordForms().length && currentW==null; i++) {
 					String req = "base:"+allSynsets.get(j)[0].getWordForms()[i].toLowerCase();
 					currentW = allConcepts.get(req);
 				}
