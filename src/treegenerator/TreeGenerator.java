@@ -16,6 +16,7 @@ import it.uniroma1.dis.wsngroup.gexf4j.core.viz.NodeShape;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
@@ -55,7 +56,6 @@ public class TreeGenerator {
 
 	static String GENERATED_GEXF_FILE_PATH;
 	static Integer ids;
-	static Integer maxDepth=1;
 	static Properties p;
 	
 	/**
@@ -66,7 +66,7 @@ public class TreeGenerator {
 		run(args);
 	}
 	
-	public static String run(String[] args) throws Exception{
+	public static String runAndGenerateGEXF(String[] args) throws Exception{
 		ids=0;
 		String textRequest= textInputSing(args[0], args[1]);
 		String separator = args[1];
@@ -81,10 +81,23 @@ public class TreeGenerator {
 		Hashtable<String, OnlineConcept> forest = getAncestors(textRequest, false,separator);
 		
 		return generateGEXFFile(forest, args[4].replace(" ", "_").replace(separator, "__").toLowerCase());
+	}
+	
+	public static Hashtable<String, OnlineConcept> run(String[] args) throws Exception {
+		ids=0;
+		String textRequest= textInputSing(args[0], args[1]);
+		String separator = args[1];
+		String iniFilePath = args[2];
+		GENERATED_GEXF_FILE_PATH = args[3];
 		
-//		System.err.println("Max depth : " + maxDepth);
-//		double averageDepth = averageDepth(forest);
-//		System.err.println("Average depth : " + averageDepth);	
+		//Configure path to Wordnet DB => Absolutely needed 
+		p = new Properties();
+	    p.load(new FileInputStream(iniFilePath));
+	    System.setProperty("wordnet.database.dir", p.getProperty("wordnetAbsolutePath")); //mettre les config dans fichier ext
+	
+		Hashtable<String, OnlineConcept> forest = getAncestors(textRequest, false,separator);
+		
+		return forest;
 	}
 	
 	private static String textInputSing(String textInput, String separator){
@@ -180,7 +193,7 @@ public class TreeGenerator {
 		Vector<String> allTerms = new Vector<String>(Arrays.asList(terms));
 		
 		for (int i=0; i<allTerms.size(); i++) {
-			OnlineConcept newBaseConcept = new OnlineConcept("base:"+allTerms.get(i).toLowerCase(), TypeTerm.Base, ids, 1,0, allTerms.get(i));
+			OnlineConcept newBaseConcept = new OnlineConcept("base:"+allTerms.get(i).toLowerCase(), TypeTerm.Base, ids, 1, allTerms.get(i));
 			if(allConcepts.get(newBaseConcept.getUri())==null) {
 				allConcepts.put(newBaseConcept.getUri(),newBaseConcept);
 				ids++;
@@ -216,7 +229,7 @@ public class TreeGenerator {
 		if(termsSpotlighted.has("Resources")){
 			JSONArray resources = termsSpotlighted.getJSONArray("Resources");
 			for (int i=0; i< resources.length(); i++) {
-				OnlineConcept currentConcept = new DBpediaConcept(resources.getJSONObject(i), ids,0, 2);
+				OnlineConcept currentConcept = new DBpediaConcept(resources.getJSONObject(i), ids, 2);
 				String termsSurface = currentConcept.getLabel();
 				OnlineConcept currentBase= allConcepts.get("base:"+termsSurface);
 				
@@ -247,7 +260,7 @@ public class TreeGenerator {
 				
 				if(currentW!=null) {
 					NounSynset currentNoun = (NounSynset) allSynsets.get(j)[0]; //Le premier du paquet ??
-					OnlineConcept currentConcept = new WordNetConcept(currentNoun,ids, 0,2); 
+					OnlineConcept currentConcept = new WordNetConcept(currentNoun,ids,2); 
 					if(allConcepts.get(currentConcept.getUri())==null)
 					{
 						allConcepts.put(currentConcept.getUri(),currentConcept);
@@ -281,7 +294,7 @@ public class TreeGenerator {
 	    		Synset[] syns = wordnet.getNounSynsets(concept.getLabel());
 	    		if(syns.length!=0){
 	    			NounSynset currentNoun = (NounSynset) syns[0]; //Le premier du paquet ??
-					OnlineConcept currentConcept = new WordNetConcept(currentNoun,ids, 2,concept.getDepth()); //Same depth
+					OnlineConcept currentConcept = new WordNetConcept(currentNoun,ids, 2); //Same depth
 					if(allConcepts.get(currentConcept.getUri())==null)
 					{
 						allConcepts.put(currentConcept.getUri(),currentConcept);
@@ -301,8 +314,6 @@ public class TreeGenerator {
 	}
 	
 	private static void recursionTerms(OnlineConcept concept, Hashtable<String, OnlineConcept> allConcepts, Integer base) throws Exception{
-		if(concept.getDepth()>maxDepth)
-			maxDepth=concept.getDepth();
 		
 		if(concept.getParents().isEmpty()){
 			if (concept.getType() == TypeTerm.DBPedia){
@@ -327,7 +338,7 @@ public class TreeGenerator {
 					if(l!=null)
 						label = l.getString();
 					System.out.println(uri);
-					OnlineConcept currentSuperClassConcept = new DBpediaConcept(uri,label,ids, base,concept.getDepth()+1);
+					OnlineConcept currentSuperClassConcept = new DBpediaConcept(uri,label,ids, base);
 					if (allConcepts.containsKey(uri))
 						currentSuperClassConcept = allConcepts.get(uri);
 	    			else {
@@ -360,7 +371,7 @@ public class TreeGenerator {
 					if (l!=null)
 						label = l.getString();
 					System.out.println(uri + " " + label);
-					OnlineConcept currentSuperClassConcept = new DBpediaConcept(uri,label,ids, base,concept.getDepth()+1);
+					OnlineConcept currentSuperClassConcept = new DBpediaConcept(uri,label,ids, base);
 					if (allConcepts.containsKey(uri))
 						currentSuperClassConcept = allConcepts.get(uri);
 	    			else {
@@ -381,7 +392,7 @@ public class TreeGenerator {
 	    		
 	    		for (int i=0;i<hypers.length;i++) {
 	    			currentHyper = hypers[i];
-	    			OnlineConcept currentHyperConcept = new WordNetConcept(currentHyper,ids, base, concept.getDepth()+1);
+	    			OnlineConcept currentHyperConcept = new WordNetConcept(currentHyper,ids, base);
 	    			String uri = currentHyperConcept.getUri();
 	    			if (allConcepts.containsKey(uri))
 	    				currentHyperConcept = allConcepts.get(uri);
@@ -429,27 +440,5 @@ public class TreeGenerator {
 		System.out.println("Terms not spotlighted :");
 		System.out.println(termsNotSpotlighted.toString());
 		return termsNotSpotlighted;
-	}
-	
-	private static Integer mesureWuPalmer (Hashtable<String, OnlineConcept> forest, OnlineConcept concept1, OnlineConcept concept2) {
-		// score = 2*depth(lcs) / (depth(s1) + depth (s2))
-		//Intégrer les liens ? La mesure de Wu-Palmer ne les prend pas en compte..
-		
-		return 2*maxDepth/(concept1.getDepth()+concept2.getDepth());
-	}
-	
-	private static double averageDepth(Hashtable<String, OnlineConcept> forest){
-		Enumeration<OnlineConcept> e = forest.elements();
-		Integer sumDepth=0;
-		Integer nbElements=0;
-		OnlineConcept currentConcept;
-	    while(e.hasMoreElements()) {
-	    	nbElements++;
-	    	currentConcept = (OnlineConcept) e.nextElement(); 
-	    	sumDepth+= currentConcept.getDepth();
-	    }
-	    
-	    return (double)sumDepth/nbElements;
-		
 	}
 }

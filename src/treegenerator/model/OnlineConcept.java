@@ -6,17 +6,15 @@ public class OnlineConcept {
 	protected String uri;
 	protected TypeTerm type;
 	protected Integer id;
-	protected Integer depth;
 	protected Integer startingConcept; //0 : starting | 1 : created | 2 : created through equivalences
 	protected String label;
 	protected Vector<OnlineConcept> parents;//Superclasses or hypernyms
 	protected Vector<OnlineConcept> childs; //Subclasses or hyponyms
 
-	public OnlineConcept(String localUri, TypeTerm localType, Integer localId, Integer localDepth, Integer localStartingConcept, String localLabel) {
+	public OnlineConcept(String localUri, TypeTerm localType, Integer localId, Integer localStartingConcept, String localLabel) {
 		uri = localUri;
 		type = localType;
 		id = localId;
-		depth = localDepth;
 		startingConcept = localStartingConcept;
 		label = localLabel;
 		parents = new Vector<OnlineConcept>();
@@ -24,14 +22,6 @@ public class OnlineConcept {
 		
 
 		System.out.println("Creating Base Concept "+id+" " + label + " : " + uri);
-	}
-	
-	public Integer getDepth() {
-		return depth;
-	}
-
-	public void setDepth(Integer depth) {
-		this.depth = depth;
 	}
 
 	public String getLabel() {
