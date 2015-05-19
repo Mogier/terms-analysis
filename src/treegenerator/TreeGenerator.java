@@ -259,16 +259,18 @@ public class TreeGenerator {
 				}
 				
 				if(currentW!=null) {
-					NounSynset currentNoun = (NounSynset) allSynsets.get(j)[0]; //Le premier du paquet ??
-					OnlineConcept currentConcept = new WordNetConcept(currentNoun,ids,2); 
-					if(allConcepts.get(currentConcept.getUri())==null)
-					{
-						allConcepts.put(currentConcept.getUri(),currentConcept);
-						tableTerms.put(currentConcept.getUri(),currentConcept);
-						ids++;
+					for(int k=0; k<allSynsets.get(j).length; k++){
+						NounSynset currentNoun = (NounSynset) allSynsets.get(j)[k]; //Le premier du paquet ??
+						OnlineConcept currentConcept = new WordNetConcept(currentNoun,ids,2); 
+						if(allConcepts.get(currentConcept.getUri())==null)
+						{
+							allConcepts.put(currentConcept.getUri(),currentConcept);
+							tableTerms.put(currentConcept.getUri(),currentConcept);
+							ids++;
+						}
+						currentW.getParents().add(currentConcept);
+						currentConcept.getChilds().add(currentW);
 					}
-					currentW.getParents().add(currentConcept);
-					currentConcept.getChilds().add(currentW);
 				}
 			}
 		}
