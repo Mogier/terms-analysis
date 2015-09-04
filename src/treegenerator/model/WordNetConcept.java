@@ -19,6 +19,4 @@ public class WordNetConcept extends OnlineConcept {
 	public void setSynset(NounSynset synset) {
 		this.synset = synset;
 	}
-	
-	
 }
